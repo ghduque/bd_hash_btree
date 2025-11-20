@@ -1,0 +1,27 @@
+DEBUG - Criando B+ Tree Index (Ordem = 3)...
+DEBUG - -> Inserindo chave: 10
+DEBUG - -> Inserção de 10 finalizada.
+DEBUG - -> Inserindo chave: 20
+DEBUG - -> Inserção de 20 finalizada.
+DEBUG - -> Inserindo chave: 30
+DEBUG - --- Fazendo SPLIT no nó: [10, 20, 30] ---
+DEBUG - --- Nova raiz criada com chave: 20 ---
+DEBUG - -> Inserção de 30 finalizada.
+DEBUG - -> Inserindo chave: 5
+DEBUG - -> Inserção de 5 finalizada.
+DEBUG - -> Inserindo chave: 25
+DEBUG - --- Fazendo SPLIT no nó: [20, 25, 30] ---
+DEBUG - -> Inserção de 25 finalizada.
+DEBUG - -> Inserindo chave: 15
+DEBUG - --- Fazendo SPLIT no nó: [5, 10, 15] ---
+DEBUG - -> Inserção de 15 finalizada.
+DEBUG - -> Inserindo chave: 35
+DEBUG - --- Fazendo SPLIT no nó: [25, 30, 35] ---
+DEBUG - --- Fazendo SPLIT no nó: [10, 20, 25] ---
+DEBUG - -> Inserção de 35 finalizada.
+DEBUG - -> Buscando chave: 20
+DEBUG - Chave 20 não encontrada.
+DEBUG - -> Buscando chave: 5
+DEBUG - Encontrado 1 registro(s) para a chave 5.
+DEBUG - -> Buscando chave: 40
+DEBUG - Chave 40 não encontrada.
