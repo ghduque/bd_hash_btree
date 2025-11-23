@@ -25,3 +25,78 @@ DEBUG - -> Buscando chave: 5
 DEBUG - Encontrado 1 registro(s) para a chave 5.
 DEBUG - -> Buscando chave: 40
 DEBUG - Chave 40 não encontrada.
+DEBUG - Criando B+ Tree (Ordem = 3)...
+DEBUG - -> Inserindo chave: 10
+DEBUG - -> Inserção de 10 finalizada.
+DEBUG - -> Inserindo chave: 20
+DEBUG - -> Inserção de 20 finalizada.
+DEBUG - -> Inserindo chave: 5
+DEBUG - -> Inserção de 5 finalizada.
+DEBUG - -> Inserindo chave: 6
+DEBUG - -> Inserção de 6 finalizada.
+DEBUG - -> Inserindo chave: 12
+DEBUG - -> Inserção de 12 finalizada.
+DEBUG - -> Inserindo chave: 30
+DEBUG - -> Inserção de 30 finalizada.
+DEBUG - -> Inserindo chave: 7
+DEBUG - -> Inserção de 7 finalizada.
+DEBUG - -> Inserindo chave: 17
+DEBUG - -> Inserção de 17 finalizada.
+DEBUG - -> Tentando remover chave: 6
+DEBUG - -> Remoção de 6 finalizada.
+DEBUG - -> Tentando remover chave: 5
+DEBUG - --- Fazendo MERGE ---
+DEBUG - -> Remoção de 5 finalizada.
+DEBUG - -> Tentando remover chave: 20
+DEBUG - -> Remoção de 20 finalizada.
+DEBUG - -> Tentando remover chave: 12
+DEBUG - -> Remoção de 12 finalizada.
+DEBUG - -> Tentando remover chave: 30
+DEBUG - --- Fazendo MERGE ---
+DEBUG - --- Fazendo MERGE ---
+DEBUG - -> Remoção de 30 finalizada.
+DEBUG - --- B+ Tree Criada ---
+DEBUG - Config: PageSize=64B, NumFields=3
+DEBUG - Leaf Node: Max Recs=3, Min Recs=2
+DEBUG - Internal Node: Order=8, Max Keys=7
+DEBUG - -> Inserindo chave: 10
+DEBUG - -> Inserção de 10 finalizada.
+DEBUG - -> Inserindo chave: 20
+DEBUG - -> Inserção de 20 finalizada.
+DEBUG - -> Inserindo chave: 5
+DEBUG - -> Inserção de 5 finalizada.
+DEBUG - -> Inserindo chave: 6
+DEBUG - -> Inserção de 6 finalizada.
+DEBUG - -> Inserindo chave: 12
+DEBUG - -> Inserção de 12 finalizada.
+DEBUG - -> Inserindo chave: 30
+DEBUG - -> Inserção de 30 finalizada.
+DEBUG - -> Inserindo chave: 7
+DEBUG - -> Inserção de 7 finalizada.
+DEBUG - -> Inserindo chave: 17
+DEBUG - -> Inserção de 17 finalizada.
+DEBUG - -> Tentando remover chave: 6
+DEBUG - -> Remoção de 6 finalizada.
+DEBUG - --- B+ Tree Criada ---
+DEBUG - Config: PageSize=64B, NumFields=3
+DEBUG - Leaf Node: Max Recs=3, Min Recs=2
+DEBUG - Internal Node: Order=8, Max Keys=7
+DEBUG - -> Inserindo chave: 10
+DEBUG - -> Inserção de 10 finalizada.
+DEBUG - -> Inserindo chave: 20
+DEBUG - -> Inserção de 20 finalizada.
+DEBUG - -> Inserindo chave: 5
+DEBUG - -> Inserção de 5 finalizada.
+DEBUG - -> Inserindo chave: 6
+DEBUG - -> Inserção de 6 finalizada.
+DEBUG - -> Inserindo chave: 12
+DEBUG - -> Inserção de 12 finalizada.
+DEBUG - -> Inserindo chave: 30
+DEBUG - -> Inserção de 30 finalizada.
+DEBUG - -> Inserindo chave: 7
+DEBUG - -> Inserção de 7 finalizada.
+DEBUG - -> Inserindo chave: 17
+DEBUG - -> Inserção de 17 finalizada.
+DEBUG - -> Buscando intervalo: [6, 18]
+DEBUG - -> Tentando remover chave: 6
+DEBUG - -> Remoção de 6 finalizada.
