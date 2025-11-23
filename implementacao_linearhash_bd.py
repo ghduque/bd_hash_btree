@@ -112,23 +112,6 @@ class HashLinear:
         
         return None
 
-    def buscar_intervalo(self, inicio, fim):
-        """
-        Retorna todos os registros cuja chave está entre inicio e fim.
-        Obs: Em Hash, isso exige varredura completa (O(N)).
-        """
-        resultados = []
-        for item in self.table:
-            # Ignora espaços vazios e itens deletados
-            if item is not None and item is not self.TOMBSTONE:
-                chave = item[0]
-                if inicio <= chave <= fim:
-                    resultados.append(item)
-        
-        # Ordena pelo primeiro campo (chave) para manter consistência com a B-Tree
-        resultados.sort(key=lambda x: x[0])
-        return resultados
-
     def exibir(self):
         print("\n--- Estrutura da Tabela Hash ---")
         print(f"Ocupação: {self.count}/{self.capacity}")
@@ -163,15 +146,14 @@ except (ValueError, EOFError, KeyboardInterrupt):
     num_campos = 3
 
 opcao = 0
-while opcao != 6:
+while opcao != 5:
     print("\n***********************************")
     print("Entre com a opcao:")
     print(" --- 1: Inserir Registro")
     print(" --- 2: Excluir Chave")
     print(" --- 3: Pesquisar por Igualdade")
-    print(" --- 4: Pesquisar por Intervalo (Range)")
-    print(" --- 5: Exibir Estrutura")
-    print(" --- 6: Sair")
+    print(" --- 4: Exibir Estrutura")
+    print(" --- 5: Sair")
     print("***********************************")
     
     try:
@@ -228,21 +210,8 @@ while opcao != 6:
             break
 
     elif opcao == 4:
-        try:
-            ini = int(input(" Chave inicial -> "))
-            fim = int(input(" Chave final -> "))
-            lista = tab.buscar_intervalo(ini, fim)
-            print(f" Encontrados {len(lista)} registros no intervalo [{ini}, {fim}]:")
-            for item in lista:
-                print(f"  -> {item}")
-        except ValueError:
-             print("Erro: Chaves devem ser números.")
-        except (EOFError, KeyboardInterrupt):
-            break
-
-    elif opcao == 5:
         tab.exibir()
 
-    elif opcao == 6:
+    elif opcao == 5:
         print(" Encerrando...")
         break
