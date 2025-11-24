@@ -47,10 +47,19 @@ O repositório está organizado de forma modular e intuitiva:
 ```
 .
 ├── .gitignore
-├── implementacao_btree_bd.py        # Implementação completa da Árvore B+
-├── implementacao_linearhash_bd.py   # Implementação completa do Hash Linear
-├── relatorio_experimento_bd2.ipynb  # Notebook com experimentos, análises e visualizações
-└── README.md                        # Documentação do projeto (este arquivo)
+├── dados_btree.csv                  # Dados sintéticos gerados para validação específica da B+ Tree
+├── dados_hash.csv                   # Dados sintéticos gerados para validação específica do Hash Linear
+├── implementacao_btree_bd.py        # Implementação completa da classe BPlusTree
+├── implementacao_linearhash_bd.py   # Implementação completa da classe LinearHash
+├── README.md                        # Documentação do projeto
+├── relatorio_experimento_bd2.ipynb  # Notebook com a bateria de testes e geração de gráficos
+├── relatorio_experimento_bd2.pdf    # Versão exportada do relatório final
+├── teste1.csv                       # Dataset de carga progressiva (Menor volume)
+├── teste2.csv                       # Dataset de carga progressiva
+├── teste3.csv                       # Dataset de carga progressiva
+├── teste4.csv                       # Dataset de carga progressiva
+└── teste5.csv                       # Dataset de carga progressiva (Maior volume)
+
 ```
 
 ### Descrição dos Componentes:
@@ -60,6 +69,7 @@ O repositório está organizado de forma modular e intuitiva:
 | `implementacao_btree_bd.py` | Contém a classe `BPlusTree` com toda a lógica de inserção, remoção, busca e gerenciamento de páginas da Árvore B+ |
 | `implementacao_linearhash_bd.py` | Contém a classe `LinearHash` com a implementação completa do algoritmo de hash linear dinâmico |
 | `relatorio_experimento_bd2.ipynb` | Notebook interativo que importa as estruturas, executa testes comparativos e apresenta resultados com gráficos e análises estatísticas |
+| `teste1.csv` a `teste5.csv`	| Conjunto de 5 arquivos sintéticos utilizados para o relatório de escalabilidade. |
 
 ---
 
