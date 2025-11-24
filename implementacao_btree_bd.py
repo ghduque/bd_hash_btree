@@ -1,5 +1,6 @@
 import math
-import sys
+import csv
+import time
 
 # --- Constantes de Configuração ---
 INT_SIZE = 4      # Tamanho de um inteiro em bytes
@@ -127,11 +128,14 @@ class BPlusTree:
             folha.keys.append(chave)
             folha.children.append(registro)
         else:
-            # zip garante que unimos chave+registro corretamente para ordenar
-            # Importante: folha.keys e folha.children sempre têm mesmo tamanho
-            pares = sorted(zip(folha.keys, folha.children) + [(chave, registro)], key=lambda x: x[0])
-            folha.keys = [p[0] for p in pares]
-            folha.children = [p[1] for p in pares]
+            # Combina chaves e registros existentes com o novo
+            pares_existentes = list(zip(folha.keys, folha.children))
+            pares_existentes.append((chave, registro))
+            # Ordena todos os pares pela chave
+            pares_ordenados = sorted(pares_existentes, key=lambda x: x[0])
+            # Separa novamente em chaves e registros
+            folha.keys = [p[0] for p in pares_ordenados]
+            folha.children = [p[1] for p in pares_ordenados]
 
     def _split(self, no):
         # Divide o nó em dois.
@@ -412,110 +416,219 @@ class BPlusTree:
 
 #### fim da classe ####
 
-# --- PROGRAMA PRINCIPAL ---
-# Configuração inicial
-print("Programa Árvore B+ (Índice com Paginação)")
-print("Configurando o índice...")
-
-# input() retorna string. Se string vazia, o 'or' pega o valor padrão. 
-# O int() converte o resultado final.
-try:
-    entrada_pag = input("Digite o tamanho da página em bytes (ex: 64, 128) [Padrão: 64]: ")
-    tam_pag = int(entrada_pag) if entrada_pag.strip() else 64
-
-    entrada_campos = input("Digite o número de campos inteiros por registro (ex: 3) [Padrão: 3]: ")
-    num_campos = int(entrada_campos) if entrada_campos.strip() else 3
-
-    arv = BPlusTree(num_campos, tam_pag)
-except (ValueError, EOFError, KeyboardInterrupt):
-    print("\nEntrada inválida ou interrompida. Usando padrões (64 bytes, 3 campos).")
-    arv = BPlusTree(3, 64)
-    num_campos = 3
-
-opcao = 0
-while opcao != 6:
-    print("\n***********************************")
-    print("Entre com a opcao:")
-    print(" --- 1: Inserir Registro")
-    print(" --- 2: Excluir Chave")
-    print(" --- 3: Pesquisar por Igualdade")
-    print(" --- 4: Pesquisar por Intervalo (Range)")
-    print(" --- 5: Exibir Estrutura")
-    print(" --- 6: Sair")
-    print("***********************************")
+# --- FUNÇÃO PARA PROCESSAR CSV ---
+def processar_csv(arquivo_csv, arvore):
+    """
+    Lê o arquivo CSV e executa as operações automaticamente.
+    Formato esperado: OP,A1,A2,A3
+    - +,val1,val2,val3 (INSERÇÃO)
+    - -,chave (REMOÇÃO)
+    - ?,chave (BUSCA)
+    """
+    # Variáveis para armazenar tempos
+    tempos_insercao = []
+    tempos_delecao = []
+    tempos_busca = []
     
     try:
-        entrada_op = input("-> ")
-        if not entrada_op: 
-            # Se for apenas Enter vazio, continua (não trava se for interativo)
-            # Mas se for EOF repetitivo, cairia no except abaixo
-            continue
-        opcao = int(entrada_op)
-    except ValueError:
-        print("Opção inválida.")
-        continue
-    except (EOFError, KeyboardInterrupt):
-        print("\nEntrada interrompida. Encerrando programa.")
-        break
-
-    if opcao == 1:
-        print(f" Informe os {num_campos} valores inteiros separados por espaço.")
-        print(" Exemplo: 10 100 200")
-        try:
-            entrada = input(" Valores -> ").split()
-            if len(entrada) != num_campos:
-                print(f" Erro: Você precisa digitar exatamente {num_campos} números.")
+        with open(arquivo_csv, 'r', encoding='utf-8') as arquivo:
+            leitor = csv.reader(arquivo)
+            
+            # Pula o cabeçalho se existir
+            primeira_linha = next(leitor, None)
+            if primeira_linha and primeira_linha[0].strip().upper() == 'OP':
+                print(f"Cabeçalho detectado: {primeira_linha}\n")
             else:
-                # Converte para tupla de inteiros
-                registro = tuple(map(int, entrada))
-                arv.inserir(registro)
-                print(" Registro inserido.")
-        except ValueError:
-            print("Erro: Apenas números inteiros são aceitos.")
-        except (EOFError, KeyboardInterrupt):
-            break
+                # Se não é cabeçalho, processa essa linha
+                if primeira_linha:
+                    processar_linha(primeira_linha, arvore, tempos_insercao, tempos_delecao, tempos_busca)
+            
+            # Contadores
+            insercoes = 0
+            deletes = 0
+            buscas = 0
+            
+            # Processa cada linha
+            for linha in leitor:
+                if not linha or not linha[0]:
+                    continue
+                
+                operacao = linha[0].strip()
+                
+                if operacao == '+':
+                    sucesso, tempo = processar_insercao(linha, arvore)
+                    insercoes += sucesso
+                    if sucesso:
+                        tempos_insercao.append(tempo)
+                elif operacao == '-':
+                    sucesso, tempo = processar_delete(linha, arvore)
+                    deletes += sucesso
+                    if sucesso:
+                        tempos_delecao.append(tempo)
+                elif operacao == '?':
+                    sucesso, tempo = processar_busca(linha, arvore)
+                    buscas += sucesso
+                    if sucesso:
+                        tempos_busca.append(tempo)
+            
+            # Resumo final com estatísticas de tempo
+            print("\n" + "="*60)
+            print("RESUMO DAS OPERAÇÕES")
+            print("="*60)
+            print(f"Total de Inserções: {insercoes}")
+            print(f"Total de Deleções: {deletes}")
+            print(f"Total de Buscas: {buscas}")
+            print("="*60)
+            
+            # Estatísticas de tempo
+            print("\nESTATÍSTICAS DE TEMPO DE EXECUÇÃO")
+            print("="*60)
+            
+            if tempos_insercao:
+                print(f"\nINSERÇÕES:")
+                print(f"  - Tempo total: {sum(tempos_insercao)*1000:.4f} ms")
+                print(f"  - Tempo médio: {(sum(tempos_insercao)/len(tempos_insercao))*1000:.4f} ms")
+                print(f"  - Tempo mínimo: {min(tempos_insercao)*1000:.4f} ms")
+                print(f"  - Tempo máximo: {max(tempos_insercao)*1000:.4f} ms")
+            
+            if tempos_delecao:
+                print(f"\nDELEÇÕES:")
+                print(f"  - Tempo total: {sum(tempos_delecao)*1000:.4f} ms")
+                print(f"  - Tempo médio: {(sum(tempos_delecao)/len(tempos_delecao))*1000:.4f} ms")
+                print(f"  - Tempo mínimo: {min(tempos_delecao)*1000:.4f} ms")
+                print(f"  - Tempo máximo: {max(tempos_delecao)*1000:.4f} ms")
+            
+            if tempos_busca:
+                print(f"\nBUSCAS:")
+                print(f"  - Tempo total: {sum(tempos_busca)*1000:.4f} ms")
+                print(f"  - Tempo médio: {(sum(tempos_busca)/len(tempos_busca))*1000:.4f} ms")
+                print(f"  - Tempo mínimo: {min(tempos_busca)*1000:.4f} ms")
+                print(f"  - Tempo máximo: {max(tempos_busca)*1000:.4f} ms")
+            
+            print("="*60)
+            
+    except FileNotFoundError:
+        print(f"ERRO: Arquivo '{arquivo_csv}' não encontrado!")
+    except Exception as e:
+        print(f"ERRO ao processar CSV: {e}")
 
-    elif opcao == 2:
-        try:
-            chave = int(input(" Informe a chave (1º campo) para excluir -> "))
-            if arv.remover(chave):
-                print(" Removido com sucesso.")
-            else:
-                print(" Chave nao encontrada!")
-        except ValueError:
-            print("Erro: Chave deve ser um número.")
-        except (EOFError, KeyboardInterrupt):
-            break
+def processar_linha(linha, arvore, tempos_insercao, tempos_delecao, tempos_busca):
+    """Processa uma única linha do CSV"""
+    if not linha or not linha[0]:
+        return
+    
+    operacao = linha[0].strip()
+    
+    if operacao == '+':
+        sucesso, tempo = processar_insercao(linha, arvore)
+        if sucesso:
+            tempos_insercao.append(tempo)
+    elif operacao == '-':
+        sucesso, tempo = processar_delete(linha, arvore)
+        if sucesso:
+            tempos_delecao.append(tempo)
+    elif operacao == '?':
+        sucesso, tempo = processar_busca(linha, arvore)
+        if sucesso:
+            tempos_busca.append(tempo)
 
-    elif opcao == 3:
-        try:
-            chave = int(input(" Informe a chave para buscar -> "))
-            res = arv.buscar(chave)
-            if res:
-                print(f" Registro Encontrado: {res}")
-            else:
-                print(" Valor nao encontrado!")     
-        except ValueError:
-            print("Erro: Chave deve ser um número.")
-        except (EOFError, KeyboardInterrupt):
-            break
+def processar_insercao(linha, arvore):
+    """Processa uma operação de inserção (+,A1,A2,A3)"""
+    try:
+        valores = [int(v.strip()) for v in linha[1:] if v.strip()]
+        if len(valores) == arvore.num_fields:
+            registro = tuple(valores)
+            
+            # Marca o tempo de início
+            inicio = time.perf_counter()
+            arvore.inserir(registro)
+            # Marca o tempo de fim
+            fim = time.perf_counter()
+            tempo_execucao = fim - inicio
+            
+            print(f"✓ INSERÇÃO (+): {registro} - Tempo: {tempo_execucao*1000:.4f} ms")
+            return 1, tempo_execucao
+        else:
+            print(f"✗ INSERÇÃO (+): Número incorreto de campos. Esperado {arvore.num_fields}, recebido {len(valores)}")
+            return 0, 0
+    except ValueError as e:
+        print(f"✗ INSERÇÃO (+): Erro ao converter valores - {e}")
+        return 0, 0
 
-    elif opcao == 4:
-        try:
-            ini = int(input(" Chave inicial -> "))
-            fim = int(input(" Chave final -> "))
-            lista = arv.buscar_intervalo(ini, fim)
-            print(f" Encontrados {len(lista)} registros no intervalo [{ini}, {fim}]:")
-            for item in lista:
-                print(f"  -> {item}")
-        except ValueError:
-             print("Erro: Chaves devem ser números.")
-        except (EOFError, KeyboardInterrupt):
-            break
+def processar_delete(linha, arvore):
+    """Processa uma operação de deleção (-,chave)"""
+    try:
+        chave = int(linha[1].strip())
+        
+        # Marca o tempo de início
+        inicio = time.perf_counter()
+        resultado = arvore.remover(chave)
+        # Marca o tempo de fim
+        fim = time.perf_counter()
+        tempo_execucao = fim - inicio
+        
+        if resultado:
+            print(f"✓ REMOÇÃO (-): Chave {chave} removida - Tempo: {tempo_execucao*1000:.4f} ms")
+            return 1, tempo_execucao
+        else:
+            print(f"✗ REMOÇÃO (-): Chave {chave} não encontrada")
+            return 0, 0
+    except (ValueError, IndexError) as e:
+        print(f"✗ REMOÇÃO (-): Erro - {e}")
+        return 0, 0
 
-    elif opcao == 5:
-        arv.exibir()
+def processar_busca(linha, arvore):
+    """Processa uma operação de busca (?,chave)"""
+    try:
+        chave = int(linha[1].strip())
+        
+        # Marca o tempo de início
+        inicio = time.perf_counter()
+        resultado = arvore.buscar(chave)
+        # Marca o tempo de fim
+        fim = time.perf_counter()
+        tempo_execucao = fim - inicio
+        
+        if resultado:
+            print(f"✓ BUSCA (?): Chave {chave} -> {resultado} - Tempo: {tempo_execucao*1000:.4f} ms")
+            return 1, tempo_execucao
+        else:
+            print(f"✗ BUSCA (?): Chave {chave} não encontrada")
+            return 0, 0
+    except (ValueError, IndexError) as e:
+        print(f"✗ BUSCA (?): Erro - {e}")
+        return 0, 0
 
-    elif opcao == 6:
-        print(" Encerrando...")
-        break
+# --- PROGRAMA PRINCIPAL ---
+if __name__ == "__main__":
+    print("="*60)
+    print("ÁRVORE B+ COM AUTOMAÇÃO VIA CSV")
+    print("="*60)
+    
+    # Configuração: 256KB de página
+    TAMANHO_PAGINA = 256 * 1024  # 256KB = 262144 bytes
+    
+    # Número de campos por registro (ajuste conforme seu CSV)
+    NUM_CAMPOS = 3
+    
+    print(f"\nConfigurações:")
+    print(f"- Tamanho da página: {TAMANHO_PAGINA} bytes (256 KB)")
+    print(f"- Campos por registro: {NUM_CAMPOS}")
+    
+    # Inicializa a árvore
+    arvore = BPlusTree(NUM_CAMPOS, TAMANHO_PAGINA)
+    
+    # Nome do arquivo CSV
+    arquivo_csv = "dados_btree.csv"
+    
+    print(f"\nProcessando arquivo: {arquivo_csv}")
+    print("="*60)
+    
+    # Processa o CSV
+    processar_csv(arquivo_csv, arvore)
+    
+    # Exibe a estrutura final da árvore
+    print("\n" + "="*60)
+    print("ESTRUTURA FINAL DA ÁRVORE")
+    print("="*60)
+    arvore.exibir()

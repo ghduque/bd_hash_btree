@@ -1,4 +1,5 @@
-import sys
+import csv
+import time
 
 # --- Constantes de Configuração ---
 INT_SIZE = 4      # Tamanho de um inteiro em bytes
@@ -73,7 +74,6 @@ class HashLinear:
         # Insere no slot encontrado (None ou Tombstone)
         self.table[idx] = registro
         self.count += 1
-        # print(f"Debug: Inserido no índice {idx}")
 
     # *********************************************************************************
     # MÉTODO DE REMOÇÃO (Lazy Deletion)
@@ -112,106 +112,281 @@ class HashLinear:
         
         return None
 
-    def exibir(self):
+    def exibir(self, mostrar_tudo=False):
         print("\n--- Estrutura da Tabela Hash ---")
         print(f"Ocupação: {self.count}/{self.capacity}")
-        for i, item in enumerate(self.table):
-            if item is None:
-                print(f"[{i:03d}]: [ Livre ]")
-            elif item is self.TOMBSTONE:
-                print(f"[{i:03d}]: [ REMOVIDO ]")
-            else:
-                print(f"[{i:03d}]: {item}")
+        print(f"Taxa de ocupação: {(self.count/self.capacity)*100:.2f}%\n")
+        
+        if mostrar_tudo:
+            # Mostra toda a tabela
+            for i, item in enumerate(self.table):
+                if item is None:
+                    print(f"[{i:04d}]: [ Livre ]")
+                elif item is self.TOMBSTONE:
+                    print(f"[{i:04d}]: [ REMOVIDO ]")
+                else:
+                    print(f"[{i:04d}]: {item}")
+        else:
+            # Mostra apenas registros ocupados e removidos
+            print("Posições OCUPADAS:")
+            ocupadas = 0
+            for i, item in enumerate(self.table):
+                if item is not None and item is not self.TOMBSTONE:
+                    print(f"[{i:04d}]: {item}")
+                    ocupadas += 1
+                    if ocupadas >= 50:  # Limita a 50 registros mostrados
+                        print(f"... (mostrando primeiros 50 registros ocupados)")
+                        break
+            
+            print("\nPosições REMOVIDAS (TOMBSTONE):")
+            removidas = 0
+            for i, item in enumerate(self.table):
+                if item is self.TOMBSTONE:
+                    print(f"[{i:04d}]: [ REMOVIDO ]")
+                    removidas += 1
+                    if removidas >= 20:  # Limita a 20 removidos mostrados
+                        print(f"... (mostrando primeiros 20 registros removidos)")
+                        break
+            
+            if ocupadas == 0 and removidas == 0:
+                print("(Tabela vazia)")
+        
         print("\n")
 
 
-# --- PROGRAMA PRINCIPAL ---
-# (Mesma estrutura do seu código original)
-
-print("Programa Tabela Hash Linear (Simulação)")
-print("Configurando a tabela...")
-
-try:
-    entrada_pag = input("Digite o tamanho total em bytes (ex: 128, 1024) [Padrão: 128]: ")
-    tam_total = int(entrada_pag) if entrada_pag.strip() else 128
-
-    entrada_campos = input("Digite o número de campos inteiros por registro (ex: 3) [Padrão: 3]: ")
-    num_campos = int(entrada_campos) if entrada_campos.strip() else 3
-
-    # Instancia a Hash em vez da BTree
-    tab = HashLinear(num_campos, tam_total)
-except (ValueError, EOFError, KeyboardInterrupt):
-    print("\nEntrada inválida ou interrompida. Usando padrões (128 bytes, 3 campos).")
-    tab = HashLinear(3, 128)
-    num_campos = 3
-
-opcao = 0
-while opcao != 5:
-    print("\n***********************************")
-    print("Entre com a opcao:")
-    print(" --- 1: Inserir Registro")
-    print(" --- 2: Excluir Chave")
-    print(" --- 3: Pesquisar por Igualdade")
-    print(" --- 4: Exibir Estrutura")
-    print(" --- 5: Sair")
-    print("***********************************")
+# --- FUNÇÃO PARA PROCESSAR CSV ---
+def processar_csv(arquivo_csv, tabela):
+    """
+    Lê o arquivo CSV e executa as operações automaticamente.
+    Formato esperado: OP,A1,A2,A3
+    - +,val1,val2,val3 (INSERÇÃO)
+    - -,chave (REMOÇÃO)
+    - ?,chave (BUSCA)
+    """
+    # Variáveis para armazenar tempos
+    tempos_insercao = []
+    tempos_delecao = []
+    tempos_busca = []
     
     try:
-        entrada_op = input("-> ")
-        if not entrada_op: 
-            continue
-        opcao = int(entrada_op)
-    except ValueError:
-        print("Opção inválida.")
-        continue
-    except (EOFError, KeyboardInterrupt):
-        print("\nEntrada interrompida. Encerrando programa.")
-        break
-
-    if opcao == 1:
-        print(f" Informe os {num_campos} valores inteiros separados por espaço.")
-        print(" Exemplo: 10 100 200")
-        try:
-            entrada = input(" Valores -> ").split()
-            if len(entrada) != num_campos:
-                print(f" Erro: Você precisa digitar exatamente {num_campos} números.")
+        with open(arquivo_csv, 'r', encoding='utf-8') as arquivo:
+            leitor = csv.reader(arquivo)
+            
+            # Contadores
+            insercoes = 0
+            deletes = 0
+            buscas = 0
+            linha_num = 0
+            
+            # Pula o cabeçalho se existir
+            primeira_linha = next(leitor, None)
+            if primeira_linha and primeira_linha[0].strip().upper() == 'OP':
+                print(f"Cabeçalho detectado: {primeira_linha}\n")
             else:
-                registro = tuple(map(int, entrada))
-                tab.inserir(registro)
-                print(" Operação de inserção concluída.")
-        except ValueError:
-            print("Erro: Apenas números inteiros são aceitos.")
-        except (EOFError, KeyboardInterrupt):
-            break
+                # Se não é cabeçalho, processa essa linha
+                if primeira_linha:
+                    linha_num += 1
+                    operacao = primeira_linha[0].strip()
+                    if operacao == '+':
+                        sucesso, tempo = processar_insercao(primeira_linha, tabela)
+                        insercoes += sucesso
+                        if sucesso:
+                            tempos_insercao.append(tempo)
+                    elif operacao == '-':
+                        sucesso, tempo = processar_delete(primeira_linha, tabela)
+                        deletes += sucesso
+                        if sucesso:
+                            tempos_delecao.append(tempo)
+                    elif operacao == '?':
+                        sucesso, tempo = processar_busca(primeira_linha, tabela)
+                        buscas += sucesso
+                        if sucesso:
+                            tempos_busca.append(tempo)
+            
+            # Processa cada linha
+            for linha in leitor:
+                if not linha or not linha[0]:
+                    continue
+                
+                linha_num += 1
+                operacao = linha[0].strip()
+                
+                if operacao == '+':
+                    sucesso, tempo = processar_insercao(linha, tabela)
+                    insercoes += sucesso
+                    if sucesso:
+                        tempos_insercao.append(tempo)
+                elif operacao == '-':
+                    sucesso, tempo = processar_delete(linha, tabela)
+                    deletes += sucesso
+                    if sucesso:
+                        tempos_delecao.append(tempo)
+                elif operacao == '?':
+                    sucesso, tempo = processar_busca(linha, tabela)
+                    buscas += sucesso
+                    if sucesso:
+                        tempos_busca.append(tempo)
+                else:
+                    print(f"⚠ Linha {linha_num}: Operação desconhecida '{operacao}'")
+            
+            # Resumo final
+            print("\n" + "="*60)
+            print("RESUMO DAS OPERAÇÕES")
+            print("="*60)
+            print(f"Total de linhas processadas: {linha_num}")
+            print(f"Total de Inserções: {insercoes}")
+            print(f"Total de Deleções: {deletes}")
+            print(f"Total de Buscas: {buscas}")
+            print(f"Registros atualmente na tabela: {tabela.count}")
+            print("="*60)
+            
+            # Estatísticas de tempo
+            print("\nESTATÍSTICAS DE TEMPO DE EXECUÇÃO")
+            print("="*60)
+            
+            if tempos_insercao:
+                print(f"\nINSERÇÕES:")
+                print(f"  - Tempo total: {sum(tempos_insercao)*1000:.4f} ms")
+                print(f"  - Tempo médio: {(sum(tempos_insercao)/len(tempos_insercao))*1000:.4f} ms")
+                print(f"  - Tempo mínimo: {min(tempos_insercao)*1000:.4f} ms")
+                print(f"  - Tempo máximo: {max(tempos_insercao)*1000:.4f} ms")
+            
+            if tempos_delecao:
+                print(f"\nDELEÇÕES:")
+                print(f"  - Tempo total: {sum(tempos_delecao)*1000:.4f} ms")
+                print(f"  - Tempo médio: {(sum(tempos_delecao)/len(tempos_delecao))*1000:.4f} ms")
+                print(f"  - Tempo mínimo: {min(tempos_delecao)*1000:.4f} ms")
+                print(f"  - Tempo máximo: {max(tempos_delecao)*1000:.4f} ms")
+            
+            if tempos_busca:
+                print(f"\nBUSCAS:")
+                print(f"  - Tempo total: {sum(tempos_busca)*1000:.4f} ms")
+                print(f"  - Tempo médio: {(sum(tempos_busca)/len(tempos_busca))*1000:.4f} ms")
+                print(f"  - Tempo mínimo: {min(tempos_busca)*1000:.4f} ms")
+                print(f"  - Tempo máximo: {max(tempos_busca)*1000:.4f} ms")
+            
+            print("="*60)
+            
+    except FileNotFoundError:
+        print(f"ERRO: Arquivo '{arquivo_csv}' não encontrado!")
+        print("Certifique-se de que o arquivo está no mesmo diretório do script.")
+    except Exception as e:
+        print(f"ERRO ao processar CSV: {e}")
+        import traceback
+        traceback.print_exc()
 
-    elif opcao == 2:
-        try:
-            chave = int(input(" Informe a chave (1º campo) para excluir -> "))
-            if tab.remover(chave):
-                print(" Removido com sucesso.")
-            else:
-                print(" Chave nao encontrada!")
-        except ValueError:
-            print("Erro: Chave deve ser um número.")
-        except (EOFError, KeyboardInterrupt):
-            break
+def processar_linha(linha, tabela):
+    """Processa uma única linha do CSV"""
+    if not linha or not linha[0]:
+        return
+    
+    operacao = linha[0].strip()
+    
+    if operacao == '+':
+        processar_insercao(linha, tabela)
+    elif operacao == '-':
+        processar_delete(linha, tabela)
+    elif operacao == '?':
+        processar_busca(linha, tabela)
 
-    elif opcao == 3:
-        try:
-            chave = int(input(" Informe a chave para buscar -> "))
-            res = tab.buscar(chave)
-            if res:
-                print(f" Registro Encontrado: {res}")
-            else:
-                print(" Valor nao encontrado!")     
-        except ValueError:
-            print("Erro: Chave deve ser um número.")
-        except (EOFError, KeyboardInterrupt):
-            break
+def processar_insercao(linha, tabela):
+    """Processa uma operação de inserção (+,A1,A2,A3)"""
+    try:
+        valores = [int(v.strip()) for v in linha[1:] if v.strip()]
+        if len(valores) == tabela.num_fields:
+            registro = tuple(valores)
+            
+            # Marca o tempo de início
+            inicio = time.perf_counter()
+            tabela.inserir(registro)
+            # Marca o tempo de fim
+            fim = time.perf_counter()
+            tempo_execucao = fim - inicio
+            
+            print(f"✓ INSERÇÃO (+): {registro} - Tempo: {tempo_execucao*1000:.4f} ms")
+            return 1, tempo_execucao
+        else:
+            print(f"✗ INSERÇÃO (+): Número incorreto de campos. Esperado {tabela.num_fields}, recebido {len(valores)}")
+            return 0, 0
+    except ValueError as e:
+        print(f"✗ INSERÇÃO (+): Erro ao converter valores - {e}")
+        return 0, 0
 
-    elif opcao == 4:
-        tab.exibir()
+def processar_delete(linha, tabela):
+    """Processa uma operação de deleção (-,chave)"""
+    try:
+        chave = int(linha[1].strip())
+        
+        # Marca o tempo de início
+        inicio = time.perf_counter()
+        resultado = tabela.remover(chave)
+        # Marca o tempo de fim
+        fim = time.perf_counter()
+        tempo_execucao = fim - inicio
+        
+        if resultado:
+            print(f"✓ REMOÇÃO (-): Chave {chave} removida - Tempo: {tempo_execucao*1000:.4f} ms")
+            return 1, tempo_execucao
+        else:
+            print(f"✗ REMOÇÃO (-): Chave {chave} não encontrada")
+            return 0, 0
+    except (ValueError, IndexError) as e:
+        print(f"✗ REMOÇÃO (-): Erro - {e}")
+        return 0, 0
 
-    elif opcao == 5:
-        print(" Encerrando...")
-        break
+def processar_busca(linha, tabela):
+    """Processa uma operação de busca (?,chave)"""
+    try:
+        chave = int(linha[1].strip())
+        
+        # Marca o tempo de início
+        inicio = time.perf_counter()
+        resultado = tabela.buscar(chave)
+        # Marca o tempo de fim
+        fim = time.perf_counter()
+        tempo_execucao = fim - inicio
+        
+        if resultado:
+            print(f"✓ BUSCA (?): Chave {chave} -> {resultado} - Tempo: {tempo_execucao*1000:.4f} ms")
+            return 1, tempo_execucao
+        else:
+            print(f"✗ BUSCA (?): Chave {chave} não encontrada")
+            return 0, 0
+    except (ValueError, IndexError) as e:
+        print(f"✗ BUSCA (?): Erro - {e}")
+        return 0, 0
+
+
+# --- PROGRAMA PRINCIPAL ---
+if __name__ == "__main__":
+    print("="*60)
+    print("TABELA HASH LINEAR COM AUTOMAÇÃO VIA CSV")
+    print("="*60)
+    
+    # Configuração: 256KB de espaço total
+    TAMANHO_TOTAL = 256 * 1024  # 256KB = 262144 bytes
+    
+    # Número de campos por registro (ajuste conforme seu CSV)
+    NUM_CAMPOS = 3
+    
+    print(f"\nConfigurações:")
+    print(f"- Tamanho total: {TAMANHO_TOTAL} bytes (256 KB)")
+    print(f"- Campos por registro: {NUM_CAMPOS}")
+    
+    # Inicializa a tabela hash
+    tabela = HashLinear(NUM_CAMPOS, TAMANHO_TOTAL)
+    
+    # Nome do arquivo CSV
+    arquivo_csv = "dados_hash.csv"
+    
+    print(f"\nProcessando arquivo: {arquivo_csv}")
+    print("="*60)
+    
+    # Processa o CSV
+    processar_csv(arquivo_csv, tabela)
+    
+    # Exibe a estrutura final da tabela
+    print("\n" + "="*60)
+    print("ESTRUTURA FINAL DA TABELA HASH")
+    print("="*60)
+    tabela.exibir()
