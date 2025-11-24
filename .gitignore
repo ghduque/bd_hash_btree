@@ -1,3 +1,23 @@
+# --- Arquivos de Sistema e Python (Essencial) ---
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# --- Logs e Arquivos Temporários ---
+*.log
 bplustree.log
-implementacao_bd.ipynb
-README.md
+
+# --- Dados Sintéticos Massivos (Para não pesar o repo) ---
+teste1.csv
+teste2.csv
+teste3.csv
+teste4.csv
+teste5.csv
+
+# Se os dados abaixo forem gerados automaticamente, descomente para ignorar:
+# dados_btree.csv
+# dados_hash.csv
+
+# --- Ambiente Virtual (Caso use venv) ---
+venv/
+.base
